@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi Menu: Desktop vs Mobile (Akordeon vs Drill-Down)</title>
+    <style>
+        :root {
+            --bg-body: #0f0f12;
+            --bg-card: #18181f;
+            --bg-item: #24242e;
+            --text-main: #f0f0f5;
+            --text-muted: #9595a6;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --border: #353545;
+            --menu-bg: #1f1f28;
+            --menu-hover: #323242;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 { margin-bottom: 6px; }
+        p.desc { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px; text-align: center; }
+
+        /* Switcher Mode Uji Coba */
+        .mode-switcher {
+            display: flex;
+            gap: 10px;
+            background: var(--bg-card);
+            padding: 6px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .switch-btn {
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .switch-btn.active {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        /* Container Simulator */
+        .simulator-stage {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 550px;
+        }
+
+        /* Frame HP saat mode mobile */
+        .mobile-frame {
+            width: 380px;
+            border: 2px solid var(--accent);
+            border-radius: 20px;
+            padding: 15px;
+            background: #121217;
+            box-shadow: 0 15px 40px rgba(99, 102, 241, 0.2);
+        }
+
+        .trigger-btn {
+            width: 100%;
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+
+        /* ========================================================
+           1. STYLING MODE DESKTOP (Flyout Samping - BEBAS BUG)
+           ======================================================== */
+        .desktop-nav {
+            position: relative;
+            background: var(--menu-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            width: 270px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            padding: 6px 0;
+            font-size: 0.85rem;
+        }
+        .d-item {
+            position: relative;
+            padding: 9px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            color: var(--text-main);
+        }
+        .d-item:hover { background-color: var(--accent); color: white; }
+        .d-item.has-sub::after { content: '▸'; font-size: 0.85rem; }
+        .d-divider { height: 1px; background: rgba(255,255,255,0.08); margin: 6px 0; }
+
+        /* Submenu Melayang Bebas (Tidak terjebak overflow) */
+        .d-submenu {
+            display: none;
+            position: absolute;
+            left: 100%;
+            top: -6px;
+            background: var(--menu-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            min-width: 250px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            padding: 6px 0;
+            z-index: 100;
+        }
+        .d-item:hover > .d-submenu { display: block; }
+
+
+        /* ========================================================
+           2. STYLING MOBILE PILIHAN A (Akordeon / Buka ke Bawah)
+           ======================================================== */
+        .accordion-nav {
+            background: var(--menu-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.85rem;
+        }
+        .acc-item {
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .acc-item:hover, .acc-item.active { background: var(--menu-hover); color: var(--accent); }
+        .acc-item .icon { font-size: 0.75rem; transition: transform 0.2s; }
+        .acc-item.open .icon { transform: rotate(180deg); }
+
+        .acc-sub {
+            display: none;
+            background: #16161d;
+            padding-left: 15px;
+            border-left: 3px solid var(--accent);
+        }
+        .acc-sub.open { display: block; }
+        .acc-sub-sub {
+            display: none;
+            background: #111116;
+            padding-left: 15px;
+            border-left: 3px solid #ec4899;
+        }
+        .acc-sub-sub.open { display: block; }
+
+
+        /* ========================================================
+           3. STYLING MOBILE PILIHAN B (Drill-Down / Layar Geser)
+           ======================================================== */
+        .drill-nav {
+            background: var(--menu-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            height: 380px;
+            overflow: hidden;
+            position: relative;
+            font-size: 0.85rem;
+        }
+        .drill-screen {
+            position: absolute;
+            inset: 0;
+            background: var(--menu-bg);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow-y: auto;
+        }
+        .drill-screen.hidden-right { transform: translateX(100%); }
+        .drill-screen.hidden-left { transform: translateX(-100%); }
+        .drill-screen.active { transform: translateX(0); }
+
+        .drill-header {
+            padding: 12px 15px;
+            background: #181820;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: bold;
+            color: var(--accent);
+            cursor: pointer;
+        }
+        .drill-header:hover { background: #20202a; }
+        .drill-item {
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .drill-item:hover { background: var(--menu-hover); }
+        .drill-item.has-sub::after { content: '❯'; font-size: 0.8rem; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+    <h2>Simulasi Navigasi Menu</h2>
+    <p class="desc">Coba klik dan rasakan perbedaan navigasinya untuk menentukan mana yang paling pas di HP kamu.</p>
+
+    <!-- Tombol Pemilih Mode -->
+    <div class="mode-switcher">
+        <button class="switch-btn active" onclick="switchView('desktop')">🖥️ 1. Desktop (Flyout Samping - Fixed)</button>
+        <button class="switch-btn" onclick="switchView('mobile-a')">📱 2. Mobile Pilihan A (Akordeon)</button>
+        <button class="switch-btn" onclick="switchView('mobile-b')">📱 3. Mobile Pilihan B (Drill-Down Geser)</button>
+    </div>
+
+    <!-- Panggung Pengujian -->
+    <div class="simulator-stage">
+
+        <!-- ========================================================
+             1. TAMPILAN DESKTOP: FLYOUT MELAYANG KE SAMPING (FIXED)
+             ======================================================== -->
+        <div id="view-desktop">
+            <div style="margin-bottom: 10px; font-size: 0.85rem; color: var(--text-muted);">
+                Arahkan kursor (*hover*) ke <b>Check Sub Tracks</b> ➡️ lalu arahkan ke <b>Sub Tracks by Language</b>:
+            </div>
+            
+            <div class="desktop-nav">
+                <div class="d-item">Add Input File(s)...</div>
+                <div class="d-divider"></div>
+                <div class="d-item">Check All Tracks (320/320)</div>
+                <div class="d-item has-sub">
+                    <span>Check Video Tracks... (0/0)</span>
+                    <div class="d-submenu">
+                        <div class="d-item">All Video Tracks (0)</div>
+                    </div>
+                </div>
+                <div class="d-item has-sub">
+                    <span>Check Audio Tracks... (0/0)</span>
+                    <div class="d-submenu">
+                        <div class="d-item">All Audio Tracks (0)</div>
+                    </div>
+                </div>
+
+                <!-- Tingkat 1: Check Sub Tracks -->
+                <div class="d-item has-sub" style="background: rgba(99, 102, 241, 0.15);">
+                    <span><b>Check Sub Tracks... (13/13)</b></span>
+                    <div class="d-submenu">
+                        <div class="d-item">All Sub Tracks (13)</div>
+                        
+                        <!-- Tingkat 2: Sub Tracks by Language -->
+                        <div class="d-item has-sub" style="background: rgba(99, 102, 241, 0.2);">
+                            <span><b>Sub Tracks by Language (2)...</b></span>
+                            <!-- Tingkat 3: Bebas melayang ke samping tanpa terjebak scrollbar -->
+                            <div class="d-submenu">
+                                <div class="d-item">[ind] Indonesian (12)</div>
+                                <div class="d-item">[und] Undetermined (1)</div>
+                            </div>
+                        </div>
+
+                        <!-- Tingkat 2: Sub Tracks by Codec -->
+                        <div class="d-item has-sub">
+                            <span>Sub Tracks by Codec (1)...</span>
+                            <div class="d-submenu">
+                                <div class="d-item">[S_TEXT/ASS] (13)</div>
+                            </div>
+                        </div>
+
+                        <!-- Tingkat 2: Sub Tracks by Forced -->
+                        <div class="d-item has-sub">
+                            <span>Sub Tracks by Forced...</span>
+                            <div class="d-submenu">
+                                <div class="d-item">Forced: Yes (0)</div>
+                                <div class="d-item">Forced: No (13)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-item has-sub">
+                    <span>Check Attachment Tracks... (307/307)</span>
+                    <div class="d-submenu">
+                        <div class="d-item">All Attachment Tracks (307)</div>
+                        <div class="d-item">Font Attachments (307)</div>
+                        <div class="d-item">Non-Font Attachments (0)</div>
+                    </div>
+                </div>
+                <div class="d-divider"></div>
+                <div class="d-item">Uncheck All Tracks (320/320)</div>
+                <div class="d-item">Uncheck Sub Tracks... (13/13)</div>
+                <div class="d-item">Uncheck Attachment Tracks... (307/307)</div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             2. TAMPILAN MOBILE: PILIHAN A (AKORDEON MEKAR KE BAWAH)
+             ======================================================== -->
+        <div id="view-mobile-a" class="mobile-frame" style="display: none;">
+            <div style="font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; font-weight: bold;">
+                📱 Simulasi Layar HP (Model Akordeon)
+            </div>
+            
+            <div class="accordion-nav">
+                <div class="acc-item">Check All Tracks (320/320)</div>
+
+                <!-- Header Akordeon Tingkat 1 -->
+                <div class="acc-item" onclick="toggleAcc('sub-box-1', this)">
+                    <span>Check Sub Tracks... (13/13)</span>
+                    <span class="icon">▼</span>
+                </div>
+                <div class="acc-sub" id="sub-box-1">
+                    <div class="acc-item">All Sub Tracks (13)</div>
+
+                    <!-- Header Akordeon Tingkat 2 -->
+                    <div class="acc-item" onclick="toggleAcc('lang-box', this)">
+                        <span>Sub Tracks by Language (2)...</span>
+                        <span class="icon">▼</span>
+                    </div>
+                    <!-- Isi Tingkat 3 -->
+                    <div class="acc-sub-sub" id="lang-box">
+                        <div class="acc-item" onclick="alert('Centang Sub Bahasa Indonesia')">[ind] Indonesian (12)</div>
+                        <div class="acc-item" onclick="alert('Centang Sub Undetermined')">[und] Undetermined (1)</div>
+                    </div>
+
+                    <div class="acc-item" onclick="toggleAcc('codec-box', this)">
+                        <span>Sub Tracks by Codec (1)...</span>
+                        <span class="icon">▼</span>
+                    </div>
+                    <div class="acc-sub-sub" id="codec-box">
+                        <div class="acc-item">[S_TEXT/ASS] (13)</div>
+                    </div>
+                </div>
+
+                <div class="acc-item" onclick="toggleAcc('att-box', this)">
+                    <span>Check Attachment Tracks... (307/307)</span>
+                    <span class="icon">▼</span>
+                </div>
+                <div class="acc-sub" id="att-box">
+                    <div class="acc-item">All Attachment Tracks (307)</div>
+                    <div class="acc-item">Font Attachments (307)</div>
+                </div>
+
+                <div class="acc-item">Uncheck All Tracks</div>
+            </div>
+        </div>
+
+        <!-- ========================================================
+             3. TAMPILAN MOBILE: PILIHAN B (DRILL-DOWN LAYAR GESER)
+             ======================================================== -->
+        <div id="view-mobile-b" class="mobile-frame" style="display: none;">
+            <div style="font-size: 0.8rem; color: var(--accent); margin-bottom: 10px; font-weight: bold;">
+                📱 Simulasi Layar HP (Model Drill-Down Geser)
+            </div>
+
+            <div class="drill-nav">
+                <!-- Layar 1: Utama -->
+                <div class="drill-screen active" id="screen-main">
+                    <div class="drill-item">Check All Tracks (320/320)</div>
+                    <div class="drill-item has-sub" onclick="openDrill('screen-sub')">
+                        <span>Check Sub Tracks... (13/13)</span>
+                    </div>
+                    <div class="drill-item has-sub" onclick="openDrill('screen-att')">
+                        <span>Check Attachment Tracks... (307/307)</span>
+                    </div>
+                    <div class="drill-item">Uncheck All Tracks (320/320)</div>
+                    <div class="drill-item">Remove All Input Files (13)</div>
+                </div>
+
+                <!-- Layar 2: Sub Tracks -->
+                <div class="drill-screen hidden-right" id="screen-sub">
+                    <div class="drill-header" onclick="backDrill('screen-sub', 'screen-main')">
+                        <span>⬅ Kembali ke Menu Utama</span>
+                    </div>
+                    <div class="drill-item">All Sub Tracks (13)</div>
+                    <div class="drill-item has-sub" onclick="openDrill('screen-sub-lang')">
+                        <span>Sub Tracks by Language (2)...</span>
+                    </div>
+                    <div class="drill-item has-sub">
+                        <span>Sub Tracks by Codec (1)...</span>
+                    </div>
+                    <div class="drill-item has-sub">
+                        <span>Sub Tracks by Forced...</span>
+                    </div>
+                </div>
+
+                <!-- Layar 3: Sub by Language -->
+                <div class="drill-screen hidden-right" id="screen-sub-lang">
+                    <div class="drill-header" onclick="backDrill('screen-sub-lang', 'screen-sub')">
+                        <span>⬅ Kembali ke Check Sub Tracks</span>
+                    </div>
+                    <div class="drill-item" onclick="alert('Centang Sub Bahasa Indonesia')">[ind] Indonesian (12)</div>
+                    <div class="drill-item" onclick="alert('Centang Sub Undetermined')">[und] Undetermined (1)</div>
+                </div>
+
+                <!-- Layar 2: Attachments -->
+                <div class="drill-screen hidden-right" id="screen-att">
+                    <div class="drill-header" onclick="backDrill('screen-att', 'screen-main')">
+                        <span>⬅ Kembali ke Menu Utama</span>
+                    </div>
+                    <div class="drill-item">All Attachment Tracks (307)</div>
+                    <div class="drill-item">Font Attachments (307)</div>
+                    <div class="drill-item">Non-Font Attachments (0)</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Logika Pengganti View
+        function switchView(mode) {
+            document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('view-desktop').style.display = mode === 'desktop' ? 'block' : 'none';
+            document.getElementById('view-mobile-a').style.display = mode === 'mobile-a' ? 'block' : 'none';
+            document.getElementById('view-mobile-b').style.display = mode === 'mobile-b' ? 'block' : 'none';
+        }
+
+        // Logika Akordeon (Pilihan A)
+        function toggleAcc(id, el) {
+            const box = document.getElementById(id);
+            box.classList.toggle('open');
+            el.classList.toggle('open');
+        }
+
+        // Logika Drill-Down Layar Geser (Pilihan B)
+        function openDrill(targetId) {
+            const target = document.getElementById(targetId);
+            target.classList.remove('hidden-right');
+            target.classList.add('active');
+        }
+
+        function backDrill(currentId, prevId) {
+            const current = document.getElementById(currentId);
+            current.classList.remove('active');
+            current.classList.add('hidden-right');
+        }
+    </script>
+</body>
+</html>
